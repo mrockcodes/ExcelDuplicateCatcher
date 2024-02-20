@@ -1,0 +1,32 @@
+import xlwings as xw
+import pandas as pd
+
+def find_duplicates_excel():
+    wb = xw.Book.caller()
+    sheet = wb.sheets.active
+    df = sheet.used_range.options(pd.DataFrame).value
+    duplicates = {}
+    
+    for column in df.columns:
+        for index, value in df[column].items():
+            if df[column].duplicated().iloc[index]:
+                if value in duplicates:
+                    duplicates[value].append((index, column))
+                else:
+                    duplicates[value] = [(index, column)]
+    
+    if duplicates:
+        dup_sheet = wb.sheets.add("Duplicates")
+        dup_sheet.range("A1").value = [["Duplicate", "Row", "Column"]]
+        row_num = 2
+        for value, positions in duplicates.items():
+            for position in positions:
+                dup_sheet.range(f"A{row_num}").value = [value, position[0] + 1, position[1] + 1]
+                row_num += 1
+        dup_sheet.autofit()
+
+@xw.func
+def find_duplicates():
+    find_duplicates_excel()
+
+xw.Book("Book1").macro("find_duplicates_excel")
